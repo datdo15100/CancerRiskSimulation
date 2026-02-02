@@ -1,0 +1,8 @@
+.cache/
+.metadata/
+.gama_application_workspace
+.built_in_models_*
+
+.DS_Store
+Thumbs.db
+Desktop.ini
