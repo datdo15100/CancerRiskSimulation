@@ -1,11 +1,15 @@
-This is the project Cancer Risk Simulation.
-Our Team Member:
-- Nguyen Dang Trung 2440054
-- Do Thanh Dat - update ur ID
-- Nguyen Thanh Binh - update ur ID
+# Cancer Risk Simulation Project
 
-Project Goal is to build a spatial, agent-based simulation that models how individual cancer risk emerges over time from the interaction between:
-- Urban environment
-- Daily Mobility (travel to work-home and vice versa)
-- Individual vulnerability
+**Team Members:**
+- Nguyen Dang Trung - 2440054
+- Do Thanh Dat - 2440059
+- Nguyen Thanh Binh - 2440052
 
+## Installation
+
+This project is developed on the **Gama Platform**.
+
+1. Please install the Gama Platform from [gama-platform.org](https://gama-platform.org/download) if you don't have it installed.
+2. Download the project using this command:
+   ```bash
+   git clone [https://github.com/datdo15100/CancerRiskSimulation.git](https://github.com/datdo15100/CancerRiskSimulation.git)
