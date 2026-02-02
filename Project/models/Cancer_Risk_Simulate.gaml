@@ -6,7 +6,7 @@
 */
 
 
-model NewModel
+model Cancer_Risk_Simulate
 
 /* Insert your model definition here */
 
