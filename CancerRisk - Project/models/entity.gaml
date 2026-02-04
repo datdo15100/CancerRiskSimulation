@@ -7,6 +7,7 @@
 
 
 model entity
+import "scheduling.gaml"
 
 /* Insert your model definition here */
 species zone{
@@ -32,6 +33,16 @@ species people {
 	
 	// Overall risk chance:
 	float risk_chance_total <- 0.0;
+	point target;
+
+	int start_work <- rnd(min_work_start, max_work_start) ;
+    int end_work <- rnd(min_work_end, max_work_end) ;
+    float speed <- rnd(min_speed, max_speed);
+    string objective <- "resting"; 
+
+	building house;
+	building working_place;
+	bool at_home <- true;
 	init {
 		if (age > 18){
 			bool smoking <- (flip(0.5) ? true : false);	
@@ -47,7 +58,7 @@ species people {
 		
 	}
 	aspect ppl{
-		draw circle(20#m) color: color border: #black;
+		draw circle(10#m) color: color border: #black;
 	}
 }
 
@@ -58,7 +69,12 @@ species road{
 }
 
 species building{
-	aspect buil{
-		draw square(20#m) color: #pink;
+	int height;
+	bool is_working_place;
+	list<people> my_inhabitants;
+	
+	aspect buil {
+		draw shape color: is_working_place ? #darkblue : #gray;
 	}
+	
 }
