@@ -5,6 +5,8 @@
 * Tags: 
 */
 
+// Create buttons 
+
 model panels
 import "entity.gaml"
 global {
@@ -47,6 +49,7 @@ global {
 									working_place <- one_of(building where (each.is_working_place));
 									target <- any_location_in(house);
 								}
+							write "Home building created with " + nb_people;
 						}
 				}
 			}
@@ -57,6 +60,12 @@ global {
 				location <- #user_location;
 				shape <- triangle(50#m);
 				is_working_place <- true;
+				if not empty(road overlapping self) or not empty(building overlapping self) {
+							write "ERROR: Building overlaps with road or other buildings. Creation canceled.";
+							do die;
+						} else {
+							write "Working place created!";
+						}
 			}
 		}
 		// Delete building

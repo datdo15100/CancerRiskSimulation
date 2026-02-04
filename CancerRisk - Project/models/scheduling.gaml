@@ -5,6 +5,8 @@
 * Tags: 
 */
 
+// Scheduling for work - rest cycle
+
 model scheduling
 
 global {

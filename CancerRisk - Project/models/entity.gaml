@@ -5,7 +5,7 @@
 * Tags: 
 */
 
-
+// Create entities
 model entity
 import "scheduling.gaml"
 
@@ -58,7 +58,7 @@ species people {
 		
 	}
 	aspect ppl{
-		draw circle(10#m) color: color border: #black;
+		draw circle(5#m) color: color border: #black;
 	}
 }
 

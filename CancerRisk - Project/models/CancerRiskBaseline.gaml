@@ -1,9 +1,10 @@
 /**
 * Name: CancerRiskBaseline
 * Based on the internal skeleton template. 
-* Author: thanhbinh
+* Author: Do Thanh Dat, Nguyen Dang Trung and Nguyen Thanh Binh
 * Tags: 
 */
+
 
 model CancerRiskBaseline
 import "panels.gaml"
