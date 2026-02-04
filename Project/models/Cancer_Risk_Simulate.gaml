@@ -15,8 +15,8 @@ global {
 	float step <- 10;
 	float dept <- rnd(250.0);
 	
-	file shapefile_buildings <- file("../includes/buildings.shp");
-	file shapefile_roads <- file("../includes/roads.shp");
+	file shapefile_buildings <- file("../includes/building_polygon.shp");
+	file shapefile_roads <- file("../includes/highway_line.shp");
 	
 	map<road,float> road_weights;
 	geometry shape <- envelope(shapefile_roads);
@@ -43,10 +43,7 @@ grid plot height:50#m width: 50#m{
 } 
 
 species building parent: building_base{
-	aspect threeD{
-		draw shape color: #cyan depth: height texture: ["../includes/roof.png",
-		"../includes/texture1.jpg"];
-	}
+
 }
 species road parent: road_base{
 	float capacity <- 1 + shape.perimeter/30;
@@ -67,22 +64,21 @@ species inhabitant parent: inhabitant_base  skills: [moving]{
 			target <- nil;
 		}
 	}
-	aspect 3D{
+	aspect asp_inhabitant{
 		draw pyramid(4) color: color;
 		draw sphere(2) at: location + {0,0,3} color: color;
 	}
 }
 
-experiment TrafficGIS type: gui {
+experiment Cancer_Risk_Simulate type: gui {
 	output {
 		display view type: 3d axes: false background: #white{
-			image "../includes/satelitte.png" refresh: false transparency: 0.2;
+//			image "../includes/satelitte.png" refresh: false transparency: 0.2;
 			//grid plot border: #green;
-			species building aspect: threeD 
-			//asp_building
-			;
+			
+			species building aspect: asp_building; 			
 			species road aspect: asp_road;
-			species inhabitant aspect: 3D;
+			species inhabitant aspect: asp_inhabitant;
 		}
 	}
 }
