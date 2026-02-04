@@ -7,6 +7,9 @@
 
 model Cancer_Risk_Simulate
 
+import "./Infras_base.gaml"
+import "./Inhabitant_base.gaml"
+
 global {
 
 	float step <- 10;
@@ -39,31 +42,22 @@ grid plot height:50#m width: 50#m{
 	
 } 
 
-species building{
-	int height;
-	aspect asp_building{
-		draw shape color: #pink border: #black //depth: dept
-		;
-	}
+species building parent: building_base{
 	aspect threeD{
 		draw shape color: #cyan depth: height texture: ["../includes/roof.png",
 		"../includes/texture1.jpg"];
 	}
 }
-species road{
+species road parent: road_base{
 	float capacity <- 1 + shape.perimeter/30;
 	int nb_drivers <- 0 update: length(inhabitant at_distance 1);
 	float speed_rate <- 1.0 update: exp(-nb_drivers/capacity) min: 0.1;
-	aspect asp_road{
-		draw (shape buffer(1 + 3 * (1 - speed_rate))) color: #blue;
-	}
 }
 
-species inhabitant skills: [moving]{
-	point target;
+species inhabitant parent: inhabitant_base  skills: [moving]{
+
 	rgb color <- rnd_color(255);
 	float proba_leave <- 0.05;
-	float speed <- 5 #km/#h;
 	reflex leave when: (target = nil) and (flip(proba_leave)){
 		target <- any_location_in(one_of(building));
 	}
@@ -80,7 +74,6 @@ species inhabitant skills: [moving]{
 }
 
 experiment TrafficGIS type: gui {
-	/** Insert here the definition of the input and output of the model */
 	output {
 		display view type: 3d axes: false background: #white{
 			image "../includes/satelitte.png" refresh: false transparency: 0.2;
