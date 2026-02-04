@@ -8,6 +8,7 @@
 // Scheduling for work - rest cycle
 
 model scheduling
+import "entity.gaml"
 
 global {
 	/** Insert the global definitions, variables and actions here */
@@ -18,6 +19,16 @@ global {
     int max_work_end <- 20; 
     float min_speed <- 1.0 #km / #h;
     float max_speed <- 5.0 #km / #h; 
+    
+    graph road_network;
+	float step <- 10#minute;
+	map<road,float> new_weights;
+    
+    map<int, float> road_usage_by_hour <- [];
+	int max_drivers -> {max(road collect each.nb_drivers)};
+	int total_drivers -> {sum(road collect each.nb_drivers)};
+	
+	
 }
 
 experiment scheduling type: gui {

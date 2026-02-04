@@ -14,7 +14,7 @@ species zone{
 	string zone_type;
 }
 
-species people {
+species people skills: [moving]{
 	// People's skin colors :))
 	rgb color <- rnd_color(255);
 	// Baseline factors:
@@ -48,23 +48,36 @@ species people {
 			bool smoking <- (flip(0.5) ? true : false);	
 		} 
 	}
-	reflex go_to_work{
-		
+	reflex go_to_work when: current_date.hour = start_work and objective = "resting" {
+		objective <- "working" ;
+		target <- any_location_in(working_place);
 	}
-	reflex return_home{
-		
+	
+	reflex go_home when: current_date.hour = end_work and objective = "working" {
+		objective <- "resting" ;
+		target <- any_location_in(house);
 	}
+
 	reflex becoming_cancer{
 		
 	}
 	aspect ppl{
 		draw circle(5#m) color: color border: #black;
 	}
+	
+	reflex move when: target != nil {
+		write "ok";
+		do goto target: target on: road_network move_weights:new_weights ;
+	}
+	
 }
 
-species road{
-	aspect r0ad{
-	draw shape color: #blue;
+species road {
+	float capacity <- 1 + shape.perimeter/10;
+	int nb_drivers <- 0 update: length(people at_distance 1);
+	float speed_rate <- 1.0 update:  exp(-nb_drivers/capacity) min: 0.1;
+	aspect r0ad {
+		draw (shape + 3 * speed_rate) color: #red;
 	}
 }
 
