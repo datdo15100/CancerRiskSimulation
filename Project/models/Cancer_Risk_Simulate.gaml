@@ -9,6 +9,7 @@ model Cancer_Risk_Simulate
 
 import "./Infras_base.gaml"
 import "./Inhabitant_base.gaml"
+import "./PM_fog.gaml"
 
 global {
 
@@ -70,11 +71,48 @@ species inhabitant parent: inhabitant_base  skills: [moving]{
 	}
 }
 
+
+species pm_clound parent: cloud {}
+
+species pm_balls parent: ball {}
+
 experiment Cancer_Risk_Simulate type: gui {
+	parameter 'Create groups?' var: create_group <- true;
+	parameter 'Create clouds?' var: create_cloud <- true;
+	
 	output {
 		display view type: 3d axes: false background: #white{
 //			image "../includes/satelitte.png" refresh: false transparency: 0.2;
 			//grid plot border: #green;
+			
+			
+			species ball aspect: default transparency: 0.5;
+			species group aspect: default transparency: 0.5 {
+				species ball_in_group;
+			}
+			
+			
+			species cloud aspect: default {
+				species group_delegation transparency: 0.9 {
+					species ball_in_cloud;
+					species ball_in_group;
+				}
+
+			}
+			
+			
+			species ball;
+		
+
+		
+			species group;
+			species group_agents_viewer;
+		
+
+		
+			species cloud;
+			
+				
 			
 			species building aspect: asp_building; 			
 			species road aspect: asp_road;
