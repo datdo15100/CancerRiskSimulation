@@ -1,7 +1,7 @@
 /**
-* Name: TrafficGIS - Fixed Version with Daily Cycles
-* Author: trungnd (fixed by Claude)
-* Description: Proper daily home-work-home cycles with time-based building occupancy
+* Name: TrafficGIS - Integrated with PM2.5 Emissions
+* Author: trungnd (improved by Claude)
+* Description: Inhabitants emit PM2.5 while traveling, affecting cloud pollution levels
 */
 
 model Cancer_Risk_Simulate
@@ -9,7 +9,7 @@ model Cancer_Risk_Simulate
 import "./Infras_base.gaml"
 import "./Inhabitant_base.gaml"
 import "./PM_fog.gaml"
-import "./date_time.gaml"
+import "date_time.gaml"
 
 global {
 
@@ -24,8 +24,12 @@ global {
 	
     date starting_date <- date("2023-10-01 06:00:00");
 	
+	// ========== PM EMISSION GLOBAL TRACKING ==========
+	float total_traffic_pm_emission <- 0.0 update: sum(inhabitant collect each.emission_pm);
+	int inhabitants_traveling <- 0 update: length(inhabitant where not(each.is_inside_building));
 	
 	graph road_network;
+	
 	//creation of buildings, roads, and inhabitants.
 	init{
 		create building from: shapefile_buildings with:(height:int(read("HEIGHT")))
@@ -86,6 +90,10 @@ species inhabitant parent: inhabitant_base  skills: [moving]{
 	point target <- nil;                   // Where are they going?
 	building target_building <- nil;       // Which building are they targeting?
 	
+	// ========== PM2.5 EMISSION ==========
+	float emission_pm <- 0.0;              // Current PM2.5 emission (μg/m³ per step)
+	float base_emission_rate <- 2.0 + rnd(3.0);  // Base emission: 2-5 μg/m³ per step when moving
+	
 	// ========== SCHEDULE CONFIGURATION ==========
 	int work_start_hour <- 6 + rnd(3);     // Work starts between 6-9 AM (randomized per inhabitant)
 	int work_end_hour;                     // Calculated: work_start_hour + 8 hours
@@ -116,7 +124,8 @@ species inhabitant parent: inhabitant_base  skills: [moving]{
         }
         
         write name + " initialized: Home at " + home_building + ", Work at " + work_building + 
-              ", Work hours: " + work_start_hour + ":00 to " + work_end_hour + ":00";
+              ", Work hours: " + work_start_hour + ":00 to " + work_end_hour + ":00" +
+              ", Base emission: " + base_emission_rate + " μg/m³";
     }
 	
 	// ========== REFLEX 1: GO TO WORK (Every day at work_start_hour) ==========
@@ -150,12 +159,28 @@ species inhabitant parent: inhabitant_base  skills: [moving]{
         write name + " finished work after " + work_duration + " hours, going home at " + current_date;
     }
     
-	// ========== REFLEX 3: MOVE TOWARDS TARGET ==========
+	// ========== REFLEX 3: MOVE TOWARDS TARGET + EMIT PM2.5 ==========
 	reflex move when: target != nil and not is_inside_building {
+		// Calculate PM emission based on movement
+		emission_pm <- base_emission_rate * speed * step / 10.0;
+		
+		// Move on road network
 		do goto target: target on: road_network move_weights: road_weights;
+		
+		// Emit PM to nearby clouds
+		list<cloud> nearby_clouds <- cloud at_distance 50;
+		if not empty(nearby_clouds) {
+			ask nearby_clouds {
+				// Add traffic PM emission to cloud
+				traffic_pm_level <- traffic_pm_level + myself.emission_pm;
+			}
+		}
 		
 		// Check if reached target
 		if location = target {
+			// Stop emitting PM
+			emission_pm <- 0.0;
+			
 			// Enter the target building
 			if target_building != nil {
 				do enter_building(target_building);
@@ -165,11 +190,17 @@ species inhabitant parent: inhabitant_base  skills: [moving]{
 		}
 	}
 	
+	// ========== REFLEX 4: ZERO EMISSION WHEN INSIDE ==========
+	reflex zero_emission_inside when: is_inside_building {
+		emission_pm <- 0.0;
+	}
+	
 	// ========== ACTION: ENTER A BUILDING ==========
 	action enter_building(building b) {
 		is_inside_building <- true;
 		current_building <- b;
 		time_entered_building <- current_date;
+		emission_pm <- 0.0;  // Stop emitting when inside
 		
 		// Register with building
 		ask b {
@@ -219,7 +250,7 @@ species inhabitant parent: inhabitant_base  skills: [moving]{
 				display_color <- #green;   // Green for other buildings
 			}
 		} else {
-			display_color <- #yellow;      // Yellow when traveling
+			display_color <- #yellow;      // Yellow when traveling (emitting PM)
 		}
 		
 		draw pyramid(4) color: display_color;
@@ -278,10 +309,13 @@ experiment Cancer_Risk_Simulate type: gui {
                 int at_work <- length(inhabitant where (each.current_building = each.work_building));
                 int traveling <- length(inhabitant where not(each.is_inside_building));
                 
-                draw rectangle(350, 120) at: {180, 180} color: rgb(40, 40, 40, 150) border: #white;
+                draw rectangle(450, 180) at: {230, 210} color: rgb(40, 40, 40, 150) border: #white;
                 draw string("At Home: " + at_home) at: {20, 150} color: #orange font: font("Arial", 14, #bold);
                 draw string("At Work: " + at_work) at: {20, 175} color: #blue font: font("Arial", 14, #bold);
                 draw string("Traveling: " + traveling) at: {20, 200} color: #yellow font: font("Arial", 14, #bold);
+                draw string("Total PM Emission: " + (int(total_traffic_pm_emission)) + " μg/m³") 
+                	at: {20, 225} color: #red font: font("Arial", 14, #bold);
+                draw string("Clouds: " + length(cloud)) at: {20, 250} color: #lightgreen font: font("Arial", 14, #bold);
             }
         }
         
@@ -291,7 +325,9 @@ experiment Cancer_Risk_Simulate type: gui {
         monitor "Inhabitants at HOME" value: length(inhabitant where (each.current_building = each.home_building)) color: #orange;
         monitor "Inhabitants at WORK" value: length(inhabitant where (each.current_building = each.work_building)) color: #blue;
         monitor "Inhabitants TRAVELING" value: length(inhabitant where not(each.is_inside_building)) color: #yellow;
-        monitor "Inhabitants INSIDE buildings" value: length(inhabitant where each.is_inside_building) color: #green;
+        monitor "Total Traffic PM Emission" value: total_traffic_pm_emission color: #red;
+        monitor "Number of Clouds" value: length(cloud) color: #lightgreen;
+        monitor "Average Cloud PM2.5" value: (length(cloud) > 0) ? mean(cloud collect each.pm25_density) : 0.0 color: #purple;
 
 	}
 }
