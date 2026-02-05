@@ -1,8 +1,7 @@
 /**
-* Name: PMfog
-* Based on the internal empty template. 
-* Author: TrungNguyen
-* Tags: 
+* Name: PMfog - Integrated with Traffic Emissions
+* Author: TrungNguyen (improved by Claude)
+* Description: Clouds have PM2.5 = PM_base + traffic_level (from traveling inhabitants)
 */
 
 model PMfog
@@ -50,6 +49,15 @@ global {
 	int min_cloud_member <- 3 const: true;
 	int cloud_speed <- 3 const: true;
 	int cloud_perception_range <- base_perception_range const: true;
+	
+	// ========== PM2.5 CONFIGURATION ==========
+	// PM2.5 density levels (μg/m³)
+	float pm25_min <- 0.0;          // Minimum PM2.5 concentration
+	float pm25_max <- 500.0;        // Maximum PM2.5 concentration
+	
+	// PM2.5 change parameters
+	float pm25_natural_decay <- 0.95;        // Natural decay rate (wind dispersion)
+	int pm25_update_frequency <- 10;          // Update PM2.5 every N cycles
 
 	
 
@@ -89,7 +97,9 @@ global {
 				capture one_group as: group_delegation {
 					migrate ball_in_group target: ball_in_cloud;
 				}
-				color <- one_of(group_delegation).color.darker;
+				// Initialize with random base PM2.5 density
+				pm_base <- rnd(30.0, 80.0);
+				traffic_pm_level <- 0.0;
 			}
 		}
 	}
@@ -345,10 +355,71 @@ species group {
 
 }
 
-//Species cloud that will be created by an agglomeration of groups.
+// ========== CLOUD SPECIES WITH PM_BASE + TRAFFIC_LEVEL ==========
 species cloud {
 	geometry shape <- any_point_in(host) update: convex_hull(polygon(group_delegation collect ((each.shape).location)));
-	rgb color;
+	
+	// ========== PM2.5 PROPERTIES ==========
+	// PM2.5 = PM_base + traffic_pm_level
+	float pm_base <- 50.0;             // Base PM2.5 from ambient pollution (μg/m³)
+	float traffic_pm_level <- 0.0;     // Additional PM2.5 from traffic (sum of nearby inhabitants' emissions)
+	float pm25_density update: pm_base + traffic_pm_level;  // Total PM2.5 = base + traffic
+	
+	rgb color update: get_pm25_color();  // Color based on total PM2.5 density
+	
+	// Calculate color based on PM2.5 density (WHO Air Quality scale)
+	rgb get_pm25_color {
+		// Color interpolation based on PM2.5 levels
+		if pm25_density <= 12.0 {
+			// Good: Green
+			float intensity <- pm25_density / 12.0;
+			return rgb(0, 255 * (1 - intensity * 0.3), 0, 150);
+		} 
+		else if pm25_density <= 35.0 {
+			// Moderate: Green to Yellow
+			float ratio <- (pm25_density - 12.0) / (35.0 - 12.0);
+			return rgb(255 * ratio, 255, 0, 150);
+		}
+		else if pm25_density <= 55.0 {
+			// Unhealthy for Sensitive: Yellow to Orange
+			float ratio <- (pm25_density - 35.0) / (55.0 - 35.0);
+			return rgb(255, 255 * (1 - ratio * 0.35), 0, 150);
+		}
+		else if pm25_density <= 150.0 {
+			// Unhealthy: Orange to Red
+			float ratio <- (pm25_density - 55.0) / (150.0 - 55.0);
+			return rgb(255, 165 * (1 - ratio), 0, 150);
+		}
+		else if pm25_density <= 250.0 {
+			// Very Unhealthy: Red to Purple
+			float ratio <- (pm25_density - 150.0) / (250.0 - 150.0);
+			return rgb(255 - 126 * ratio, 0, 128 * ratio, 150);
+		}
+		else {
+			// Hazardous: Purple to Maroon
+			float ratio <- min(1.0, (pm25_density - 250.0) / 150.0);
+			return rgb(129 - 1 * ratio, 0, 128 - 0 * ratio, 150);
+		}
+	}
+	
+	// ========== UPDATE PM2.5: Natural decay + traffic influences ==========
+	reflex update_pm25_density when: (cycle mod pm25_update_frequency) = 0 {
+		// 1. Natural decay (wind dispersion, settling)
+		traffic_pm_level <- traffic_pm_level * pm25_natural_decay;
+		
+		// 2. Small random variation in base PM
+		pm_base <- pm_base + rnd(-2.0, 2.0);
+		pm_base <- max(20.0, min(100.0, pm_base));  // Keep base PM between 20-100
+		
+		// Keep total PM within bounds
+		if pm25_density < pm25_min {
+			pm_base <- pm25_min;
+			traffic_pm_level <- 0.0;
+		}
+		if pm25_density > pm25_max {
+			traffic_pm_level <- pm25_max - pm_base;
+		}
+	}
 
 	//Species contained in the cloud to represent the groups captured by the cloud agent
 	species group_delegation parent: group topology: (topology(world.shape)) {
@@ -385,7 +456,9 @@ species cloud {
 				location <- {((location.x) + dx), ((location.y) + dy)};
 			}
 
+			// ========== HIDE THE DOTS - Empty aspect ==========
 			aspect default {
+				// Don't draw anything - removes the visible dots!
 			}
 
 		}
@@ -454,74 +527,31 @@ species cloud {
 		do die;
 	}
 
+	// ========== CLOUD VISUALIZATION - Shows PM_base + traffic_level ==========
 	aspect default {
-		draw shape color: color wireframe: true;
-		draw (name + ' with ' + (string(length(members))) + ' groups.') size: 15 color: color at: {location.x - 65, location.y};
+		// Draw filled cloud shape with PM2.5 color
+		draw shape color: color border: color.darker;
+		
+		// Draw PM2.5 density label with breakdown
+		string pm25_level <- "";
+		if pm25_density <= 12.0 { pm25_level <- "Good"; }
+		else if pm25_density <= 35.0 { pm25_level <- "Moderate"; }
+		else if pm25_density <= 55.0 { pm25_level <- "Sensitive"; }
+		else if pm25_density <= 150.0 { pm25_level <- "Unhealthy"; }
+		else if pm25_density <= 250.0 { pm25_level <- "Very Unhealthy"; }
+		else { pm25_level <- "Hazardous"; }
+		
+		// Show total PM2.5 and breakdown
+		draw (string(int(pm25_density)) + " μg/m³ - " + pm25_level) 
+			size: 11 
+			color: #white 
+			at: {location.x - 60, location.y - 20};
+		
+		// Show breakdown: Base + Traffic
+		draw ("Base: " + string(int(pm_base)) + " + Traffic: " + string(int(traffic_pm_level))) 
+			size: 9 
+			color: #lightgray 
+			at: {location.x - 60, location.y - 5};
 	}
 
 }
-
-
-//
-//experiment group_experiment type: gui {
-//	parameter 'Create groups?' var: create_group <- true;
-//	parameter 'Create clouds?' var: create_cloud <- false;
-//	output {
-//		layout horizontal([vertical([1::5000, 0::5000])::5000, 2::5000]) tabs: true editors: false;
-//		display 'Standard display' {
-//			species ball aspect: default transparency: 0.5;
-//			species group aspect: default transparency: 0.5 {
-//				species ball_in_group;
-//			}
-//
-//		}
-//
-//		display 'Ball display' {
-//			species ball;
-//		}
-//
-//		display 'Group display' {
-//			species group;
-//		}
-//
-//	}
-//
-//}
-//
-//experiment cloud_experiment type: gui {
-//	parameter 'Create groups?' var: create_group <- true;
-//	parameter 'Create clouds?' var: create_cloud <- true;
-//	output {
-//		layout vertical([horizontal([0::5000, 1::5000])::5000, horizontal([2::5000, 3::5000])::5000]) tabs: true toolbars: true editors: false;
-//		display 'Standard display'  background: #black{
-//			species ball aspect: default transparency: 0.5;
-//			species group aspect: default transparency: 0.5 {
-//				species ball_in_group;
-//			}
-//
-//			species cloud aspect: default {
-//				species group_delegation transparency: 0.9 {
-//					species ball_in_cloud;
-//					species ball_in_group;
-//				}
-//
-//			}
-//
-//		}
-//
-//		display 'Ball display'  {
-//			species ball;
-//		}
-//
-//		display 'Group display'  {
-//			species group;
-//		}
-//
-//		display 'Cloud display'  {
-//			species cloud;
-//		}
-//
-//	}
-
-//}
-
