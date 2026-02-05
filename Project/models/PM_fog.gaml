@@ -13,7 +13,7 @@ global {
 	bool create_cloud <- true;
 
 	// Environment
-	point environment_bounds <- {5000, 5000};
+	point environment_bounds <- {2500, 2500};
 	geometry shape <- rectangle(environment_bounds);
 
 	//Define a inner environment smaller inside the environment
@@ -31,7 +31,7 @@ global {
 	float ball_size <- float(3);
 	float ball_speed <- float(1);
 	float chaos_ball_speed <- 8 * ball_speed;
-	int ball_number <- 400 min: 2 max: 1000;
+	int ball_number <- 3000 min: 2 max: 10000;
 	geometry ball_shape <- circle(ball_size);
 	float ball_separation <- 6 * ball_size;
 
@@ -51,9 +51,10 @@ global {
 	int cloud_speed <- 3 const: true;
 	int cloud_perception_range <- base_perception_range const: true;
 
+	
+
 	init {
 		create ball number: ball_number;
-		create group_agents_viewer;
 	}
 
 	//The simulation will try to create group at each frequence cycle
@@ -460,76 +461,67 @@ species cloud {
 
 }
 
-species group_agents_viewer {
 
-	aspect default {
-		draw ('Number of groups: ' + (string(length(group)))) at: {(environment_bounds.x) / 2 - 210, (environment_bounds.y) / 2} color: #blue size: 40;
-	}
+//
+//experiment group_experiment type: gui {
+//	parameter 'Create groups?' var: create_group <- true;
+//	parameter 'Create clouds?' var: create_cloud <- false;
+//	output {
+//		layout horizontal([vertical([1::5000, 0::5000])::5000, 2::5000]) tabs: true editors: false;
+//		display 'Standard display' {
+//			species ball aspect: default transparency: 0.5;
+//			species group aspect: default transparency: 0.5 {
+//				species ball_in_group;
+//			}
+//
+//		}
+//
+//		display 'Ball display' {
+//			species ball;
+//		}
+//
+//		display 'Group display' {
+//			species group;
+//		}
+//
+//	}
+//
+//}
+//
+//experiment cloud_experiment type: gui {
+//	parameter 'Create groups?' var: create_group <- true;
+//	parameter 'Create clouds?' var: create_cloud <- true;
+//	output {
+//		layout vertical([horizontal([0::5000, 1::5000])::5000, horizontal([2::5000, 3::5000])::5000]) tabs: true toolbars: true editors: false;
+//		display 'Standard display'  background: #black{
+//			species ball aspect: default transparency: 0.5;
+//			species group aspect: default transparency: 0.5 {
+//				species ball_in_group;
+//			}
+//
+//			species cloud aspect: default {
+//				species group_delegation transparency: 0.9 {
+//					species ball_in_cloud;
+//					species ball_in_group;
+//				}
+//
+//			}
+//
+//		}
+//
+//		display 'Ball display'  {
+//			species ball;
+//		}
+//
+//		display 'Group display'  {
+//			species group;
+//		}
+//
+//		display 'Cloud display'  {
+//			species cloud;
+//		}
+//
+//	}
 
-}
-
-
-experiment group_experiment type: gui {
-	parameter 'Create groups?' var: create_group <- true;
-	parameter 'Create clouds?' var: create_cloud <- false;
-	output {
-		layout horizontal([vertical([1::5000, 0::5000])::5000, 2::5000]) tabs: true editors: false;
-		display 'Standard display' {
-			species ball aspect: default transparency: 0.5;
-			species group aspect: default transparency: 0.5 {
-				species ball_in_group;
-			}
-
-		}
-
-		display 'Ball display' {
-			species ball;
-		}
-
-		display 'Group display' {
-			species group;
-			species group_agents_viewer;
-		}
-
-	}
-
-}
-
-experiment cloud_experiment type: gui {
-	parameter 'Create groups?' var: create_group <- true;
-	parameter 'Create clouds?' var: create_cloud <- true;
-	output {
-		layout vertical([horizontal([0::5000, 1::5000])::5000, horizontal([2::5000, 3::5000])::5000]) tabs: true toolbars: true editors: false;
-		display 'Standard display'  background: #black{
-			species ball aspect: default transparency: 0.5;
-			species group aspect: default transparency: 0.5 {
-				species ball_in_group;
-			}
-
-			species cloud aspect: default {
-				species group_delegation transparency: 0.9 {
-					species ball_in_cloud;
-					species ball_in_group;
-				}
-
-			}
-
-		}
-
-		display 'Ball display'  {
-			species ball;
-		}
-
-		display 'Group display'  {
-			species group;
-			species group_agents_viewer;
-		}
-
-		display 'Cloud display'  {
-			species cloud;
-		}
-
-	}
-
-}
+//}
 

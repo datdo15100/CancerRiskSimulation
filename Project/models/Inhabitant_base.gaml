@@ -26,11 +26,11 @@ global {
 
 
 species inhabitant_base {
-	point target;
+	
 	float speed <- 5;
 	bool sex;
 	float bmi;
-		
+	rgb color <- rnd_color(255);	
 }
 
 

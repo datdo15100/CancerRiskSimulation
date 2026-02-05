@@ -1,8 +1,7 @@
 /**
-* Name: TrafficGIS
-* Based on the internal skeleton template. 
-* Author: trungnd
-* Tags: 
+* Name: TrafficGIS - Fixed Version with Daily Cycles
+* Author: trungnd (fixed by Claude)
+* Description: Proper daily home-work-home cycles with time-based building occupancy
 */
 
 model Cancer_Risk_Simulate
@@ -10,6 +9,7 @@ model Cancer_Risk_Simulate
 import "./Infras_base.gaml"
 import "./Inhabitant_base.gaml"
 import "./PM_fog.gaml"
+import "./date_time.gaml"
 
 global {
 
@@ -22,13 +22,16 @@ global {
 	map<road,float> road_weights;
 	geometry shape <- envelope(shapefile_roads);
 	
+    date starting_date <- date("2023-10-01 06:00:00");
+	
+	
 	graph road_network;
 	//creation of buildings, roads, and inhabitants.
 	init{
 		create building from: shapefile_buildings with:(height:int(read("HEIGHT")))
 		;
 		create road from: shapefile_roads;
-		create inhabitant number: 500{
+		create inhabitant number: 100{
 			location <- any_location_in(one_of(building));
 		}
 		road_network <- as_edge_graph(road);
@@ -44,8 +47,22 @@ grid plot height:50#m width: 50#m{
 } 
 
 species building parent: building_base{
-
+	// Track inhabitants inside this building
+	list<inhabitant> inhabitants_inside <- [];
+	
+	// Add an inhabitant to this building
+	action add_inhabitant(inhabitant i) {
+		if not(inhabitants_inside contains i) {
+			add i to: inhabitants_inside;
+		}
+	}
+	
+	// Remove an inhabitant from this building
+	action remove_inhabitant(inhabitant i) {
+		remove i from: inhabitants_inside;
+	}
 }
+
 species road parent: road_base{
 	float capacity <- 1 + shape.perimeter/30;
 	int nb_drivers <- 0 update: length(inhabitant at_distance 1);
@@ -53,21 +70,160 @@ species road parent: road_base{
 }
 
 species inhabitant parent: inhabitant_base  skills: [moving]{
-
-	rgb color <- rnd_color(255);
-	float proba_leave <- 0.05;
-	reflex leave when: (target = nil) and (flip(proba_leave)){
-		target <- any_location_in(one_of(building));
-	}
-	reflex move when: (target != nil){
+	
+	// ========== LOCATION VARIABLES ==========
+    point home_location;
+    point work_location;
+    building home_building;
+    building work_building;
+    
+    // ========== STATE VARIABLES ==========
+    bool is_inside_building <- true;      // Is inhabitant currently inside a building?
+    building current_building <- nil;      // Which building are they in?
+    date time_entered_building <- nil;     // When did they enter current building?
+    
+    // ========== MOVEMENT VARIABLES ==========
+	point target <- nil;                   // Where are they going?
+	building target_building <- nil;       // Which building are they targeting?
+	
+	// ========== SCHEDULE CONFIGURATION ==========
+	int work_start_hour <- 6 + rnd(3);     // Work starts between 6-9 AM (randomized per inhabitant)
+	int work_end_hour;                     // Calculated: work_start_hour + 8 hours
+	int work_duration <- 8;                // 8 hours of work
+	
+	// ========== INITIALIZATION ==========
+	init {
+        // Assign home building and location
+        home_building <- one_of(building);
+        home_location <- any_location_in(home_building);
+        location <- home_location;
+        
+        // Assign work building (must be different from home)
+        work_building <- one_of(building);
+        loop while: work_building = home_building { 
+        	work_building <- one_of(building); 
+        }
+        work_location <- any_location_in(work_building);
+        
+        // Calculate when work ends
+        work_end_hour <- work_start_hour + work_duration;
+        
+        // Start simulation with inhabitant at home
+        current_building <- home_building;
+        time_entered_building <- current_date;
+        ask home_building {
+        	do add_inhabitant(myself);
+        }
+        
+        write name + " initialized: Home at " + home_building + ", Work at " + work_building + 
+              ", Work hours: " + work_start_hour + ":00 to " + work_end_hour + ":00";
+    }
+	
+	// ========== REFLEX 1: GO TO WORK (Every day at work_start_hour) ==========
+    reflex go_to_work when: current_date.hour = work_start_hour 
+    						and current_date.minute = 0  // Only trigger at the exact hour
+    						and target = nil             // Not already moving
+    						and current_building = home_building {  // Currently at home
+        
+        // Set work as target
+        target <- work_location;
+        target_building <- work_building;
+        
+        // Exit home
+        do exit_building();
+        
+        write name + " is leaving home for work at " + current_date + " (hour " + current_date.hour + ")";
+    }
+    
+    // ========== REFLEX 2: GO HOME (Every day after work_duration hours at work) ==========
+    reflex go_home when: current_building = work_building 
+    					 and time_entered_building != nil
+    					 and (current_date - time_entered_building) >= work_duration#h {
+        
+        // Set home as target
+        target <- home_location;
+        target_building <- home_building;
+        
+        // Exit work
+        do exit_building();
+        
+        write name + " finished work after " + work_duration + " hours, going home at " + current_date;
+    }
+    
+	// ========== REFLEX 3: MOVE TOWARDS TARGET ==========
+	reflex move when: target != nil and not is_inside_building {
 		do goto target: target on: road_network move_weights: road_weights;
-		if (location = target){
+		
+		// Check if reached target
+		if location = target {
+			// Enter the target building
+			if target_building != nil {
+				do enter_building(target_building);
+				target_building <- nil;
+			}
 			target <- nil;
 		}
 	}
+	
+	// ========== ACTION: ENTER A BUILDING ==========
+	action enter_building(building b) {
+		is_inside_building <- true;
+		current_building <- b;
+		time_entered_building <- current_date;
+		
+		// Register with building
+		ask b {
+			do add_inhabitant(myself);
+		}
+		
+		string building_type <- (current_building = home_building) ? "HOME" : "WORK";
+		write name + " ENTERED " + building_type + " at " + current_date + 
+		      " (hour " + current_date.hour + ":" + current_date.minute + ")";
+	}
+	
+	// ========== ACTION: EXIT A BUILDING ==========
+	action exit_building {
+		if current_building != nil {
+			string building_type <- (current_building = home_building) ? "HOME" : "WORK";
+			
+			// Unregister from building
+			ask current_building {
+				do remove_inhabitant(myself);
+			}
+			
+			write name + " EXITED " + building_type + " at " + current_date + 
+			      " (stayed for " + (current_date - time_entered_building) + ")";
+			
+			current_building <- nil;
+			time_entered_building <- nil;
+		}
+		is_inside_building <- false;
+	}
+	
+	// ========== VISUALIZATION ==========
 	aspect asp_inhabitant{
-		draw pyramid(4) color: color;
-		draw sphere(2) at: location + {0,0,3} color: color;
+		// Color coding:
+		// GREEN = Inside building
+		// YELLOW = Moving/traveling
+		// BLUE = At work
+		// ORANGE = At home
+		
+		rgb display_color;
+		
+		if is_inside_building {
+			if current_building = home_building {
+				display_color <- #orange;  // Orange when at home
+			} else if current_building = work_building {
+				display_color <- #blue;    // Blue when at work
+			} else {
+				display_color <- #green;   // Green for other buildings
+			}
+		} else {
+			display_color <- #yellow;      // Yellow when traveling
+		}
+		
+		draw pyramid(4) color: display_color;
+		draw sphere(2) at: location + {0,0,3} color: display_color;
 	}
 }
 
@@ -79,6 +235,7 @@ species pm_balls parent: ball {}
 experiment Cancer_Risk_Simulate type: gui {
 	parameter 'Create groups?' var: create_group <- true;
 	parameter 'Create clouds?' var: create_cloud <- true;
+	
 	
 	output {
 		display view type: 3d axes: false background: #white{
@@ -98,25 +255,43 @@ experiment Cancer_Risk_Simulate type: gui {
 					species ball_in_group;
 				}
 
-			}
-			
-			
+			}		
 			species ball;
-		
-
-		
 			species group;
-			species group_agents_viewer;
-		
-
-		
 			species cloud;
-			
-				
-			
+
 			species building aspect: asp_building; 			
 			species road aspect: asp_road;
 			species inhabitant aspect: asp_inhabitant;
 		}
+		
+		
+		display "Clock and Statistics" type: 2d {
+            graphics "TimeInfo" {
+                // Time display
+                draw rectangle(250, 80) at: {130, 50} color: rgb(40, 40, 40, 150) border: #white;
+                draw string(string(current_date.hour) + ":" + string(current_date.minute) + ":" + string(current_date.second)) 
+                     at: {20, 70} color: #yellow font: font("Arial", 18, #bold);
+                
+                // Statistics display
+                int at_home <- length(inhabitant where (each.current_building = each.home_building));
+                int at_work <- length(inhabitant where (each.current_building = each.work_building));
+                int traveling <- length(inhabitant where not(each.is_inside_building));
+                
+                draw rectangle(350, 120) at: {180, 180} color: rgb(40, 40, 40, 150) border: #white;
+                draw string("At Home: " + at_home) at: {20, 150} color: #orange font: font("Arial", 14, #bold);
+                draw string("At Work: " + at_work) at: {20, 175} color: #blue font: font("Arial", 14, #bold);
+                draw string("Traveling: " + traveling) at: {20, 200} color: #yellow font: font("Arial", 14, #bold);
+            }
+        }
+        
+        // Detailed monitors
+		monitor "Current Date" value: current_date;
+		monitor "Current Hour" value: current_date.hour;
+        monitor "Inhabitants at HOME" value: length(inhabitant where (each.current_building = each.home_building)) color: #orange;
+        monitor "Inhabitants at WORK" value: length(inhabitant where (each.current_building = each.work_building)) color: #blue;
+        monitor "Inhabitants TRAVELING" value: length(inhabitant where not(each.is_inside_building)) color: #yellow;
+        monitor "Inhabitants INSIDE buildings" value: length(inhabitant where each.is_inside_building) color: #green;
+
 	}
 }
