@@ -1,64 +1,45 @@
 /**
 * Name: CancerRiskBaseline
 * Based on the internal skeleton template. 
-* Author: thanhbinh
+* Author: Do Thanh Dat, Nguyen Dang Trung and Nguyen Thanh Binh
 * Tags: 
 */
 
+
 model CancerRiskBaseline
-import "panels.gaml"
+
 import "entity.gaml"
+import "scheduling.gaml"
 global {
 	
 	/** Insert the global definitions, variables and actions here */
 	// Will be used as a parameter
-	int action_type <- -1;	
-	int air_pollution_rate <- 67;
-	int n0_homes <- 67;
-	int n0_work <- 67;
+	// int action_type <- -1;	
 	file shapefile_buildings <- file("../includes/building_polygon.shp");
 	file shapefile_roads <- file("../includes/highway_line.shp");
 	geometry shape <- envelope(shapefile_roads);
 	init {
-
 		create road from: shapefile_roads;
-		create people number: 10{
-			location <- any_location_in(one_of(building));
+		create building from: shapefile_buildings{
+			is_working_place <- (flip(0.5) ? true:false);
 		}
-	}
-	action activate_act {
-		button selected_but <- first(button overlapping (circle(1) at_location #user_location));
-		if(selected_but != nil) {
-			ask selected_but {
-				ask button {bord_col<-#black;}
-				if (action_type != id) {
-					action_type<-id;
-					bord_col<-#red;
-				} else {
-					action_type<- -1;
-				}
-				
-			}
+		create people number: 1000{
+			location <- any_location_in(one_of(building where(!each.is_working_place)));
+			working_place <- one_of(building where(each.is_working_place));
+			target <- any_location_in(one_of(building where(!each.is_working_place)));
 		}
-	}
-	/* 
-	action cell_management {
-		cell selected_cell <- first(cell overlapping (circle(1.0) at_location #user_location));
-		if(selected_cell != nil) {
-			ask selected_cell {
-				building <- action_type;
-				switch action_type {
-					match 0 {color <- #red;}
-					match 1 {color <- #white;}
-					match 2 {color <- #yellow;}
-					match 3 {color <- #black; building <- -1;}
-				}
-			}
-		}
+		road_network <- as_edge_graph(road);
+		
 	}
 	
-	*/
-	
+	reflex update_speed{
+		road_weights <- road as_map(each::each.shape.perimeter/each.speed_rate);
+	}
+	// Clock!
+	reflex write_sim_info{
+		write current_date;
+		write "-------------------------";
+	}
 }
 
 
@@ -69,15 +50,16 @@ experiment CancerRiskBaseline type: gui {
 	output {
 		
 		display cancer type: 3d {
-			species road aspect: r0ad;
+			species road aspect: asp_road;
 			species building aspect: buil;
 			species people aspect: ppl;
-			//species home aspect:maison;
-			//species workplace aspect: travaille;
+		//	event #mouse_down {ask simulation {do point_management;}}
 		}
-		display panels background:#black name:"Tools panel"  type:2d antialias:false{
+		/* 
+		display panels  type:2d {
 			species button aspect:normal ;
 			event #mouse_down {ask simulation {do activate_act;}}  
 		}
+		*/
 	}
 }
