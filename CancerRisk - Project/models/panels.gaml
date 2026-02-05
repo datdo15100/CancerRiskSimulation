@@ -67,6 +67,9 @@ global {
 							write "Working place created!";
 						}
 			}
+			ask people {
+							working_place <- one_of(building where (each.is_working_place));
+						}
 		}
 		// Delete building
 		if (action_type = 2){
