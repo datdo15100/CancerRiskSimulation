@@ -30,7 +30,10 @@ species inhabitant_base {
 	float speed <- 5;
 	bool sex;
 	float bmi;
-	rgb color <- rnd_color(255);	
-}
+	rgb color;
+//		
+//	bool has_mask <- true;
+//	bool is_smoking <- true;
 
+}
 

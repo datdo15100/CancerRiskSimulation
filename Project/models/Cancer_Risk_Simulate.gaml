@@ -101,6 +101,7 @@ species inhabitant parent: inhabitant_base  skills: [moving]{
 	
 	// ========== INITIALIZATION ==========
 	init {
+		
         // Assign home building and location
         home_building <- one_of(building);
         home_location <- any_location_in(home_building);
@@ -300,7 +301,7 @@ experiment Cancer_Risk_Simulate type: gui {
 		display "Clock and Statistics" type: 2d {
             graphics "TimeInfo" {
                 // Time display
-                draw rectangle(250, 80) at: {130, 50} color: rgb(40, 40, 40, 150) border: #white;
+                draw rectangle(500, 160) at: {260, 100} color: rgb(40, 40, 40, 150) border: #white;
                 draw string(string(current_date.hour) + ":" + string(current_date.minute) + ":" + string(current_date.second)) 
                      at: {20, 70} color: #yellow font: font("Arial", 18, #bold);
                 
@@ -315,7 +316,6 @@ experiment Cancer_Risk_Simulate type: gui {
                 draw string("Traveling: " + traveling) at: {20, 200} color: #yellow font: font("Arial", 14, #bold);
                 draw string("Total PM Emission: " + (int(total_traffic_pm_emission)) + " μg/m³") 
                 	at: {20, 225} color: #red font: font("Arial", 14, #bold);
-                draw string("Clouds: " + length(cloud)) at: {20, 250} color: #lightgreen font: font("Arial", 14, #bold);
             }
         }
         
