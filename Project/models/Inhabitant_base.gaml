@@ -31,9 +31,6 @@ species inhabitant_base {
 	bool sex;
 	float bmi;
 	rgb color;
-//		
-//	bool has_mask <- true;
-//	bool is_smoking <- true;
 
 }
 
