@@ -48,35 +48,46 @@ species people skills: [moving]{
 	building working_place;
 	bool at_home <- true;
 	
-	reflex go_to_work when: (current_date.hour = start_work) and (target = nil) {
-		//objective <- "working" ;
-		target <- any_location_in(one_of(building where(each.is_working_place)));
+	reflex go_to_work when: 
+	(current_date.hour = start_work) 
+	and (target = nil) {
+		target <- any_location_in
+		(one_of(building where(each.is_working_place)));
 	}
 	
-	reflex go_home when: (current_date.hour = end_work) and (target = nil){
-		//objective <- "resting" ;
-		target <- any_location_in(one_of(building where(!each.is_working_place)));
-	}
-
-	aspect ppl{
-		draw circle(2#m) color: color border: #black;
+	reflex go_home when: (current_date.hour = end_work) 
+	and (target = nil){
+		target <- any_location_in
+		(one_of(building where(!each.is_working_place)));
 	}
 	
 	reflex move when: (target != nil) {
-		do goto target: target on: road_network move_weights:road_weights;
+		do goto target: target 
+		on: road_network move_weights:road_weights;
 		if (location = target){
 			target <- nil;
 		}
 	}
+	aspect ppl{
+		draw circle(2#m) color: color border: #black;
+	}
+	
 	
 }
 
 species road{
+	// Maximum drivers on the road
 	float capacity <- 1 + shape.perimeter/30;
-	int nb_drivers <- 0 update: length(people at_distance 1);
-	float speed_rate <- 1.0 update: exp(-nb_drivers/capacity) min: 0.1;
+	// Number of drivers currently on the road
+	int nb_drivers <- 0 
+	update: length(people at_distance 1);
+	// Current speed rate that vehicles travelling
+	float speed_rate <- 1.0 
+	update: exp(-nb_drivers/capacity) min: 0.1;
+	// Road width changes with the current number of drivers
 	aspect asp_road{
-		draw (shape buffer(1 + 3 * (1 - speed_rate))) color: #blue;
+		draw (shape buffer(1 + 3 * (1 - speed_rate))) 
+		color: #blue;
 	}
 }
 
@@ -86,7 +97,8 @@ species building{
 	list<people> my_inhabitants;
 	
 	aspect buil {
-		draw shape color: is_working_place ? #green : #pink border: #black;
+		draw shape color: is_working_place ?
+	 #green : #pink border: #black;
 	}
 	
 }
