@@ -186,6 +186,12 @@ Three scenarios for comparison:
 - **PM Weight (omega_pm):** 0.001-0.1 (default: 0.03)
 - **PM Reference:** 50-500 μg/m³ (default: 150)
 
+
+### System Architecture
+This is the species description and their relation as described in the figure:
+
+![Model Architecture](https://www.plantuml.com/plantuml/proxy?cache=no&src=https://raw.githubusercontent.com/datdo15100/CancerRiskSimulation/main/models/Cancer_Risk_Simulation_Simple.puml)
+
 ---
 
 ## Troubleshooting
