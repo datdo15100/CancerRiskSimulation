@@ -174,6 +174,7 @@ Three scenarios for comparison:
 
 ## Key Parameters (Adjustable)
 
+
 ### Population
 - **Initial Population:** 100-10000 (default: 3000)
 - **Resident Speed:** 0.1-5.0 m/s (default: 5.0)
@@ -201,6 +202,3 @@ This is the species description and their relation as described in the figure:
 
 ### Cannot Find Shapefiles
 → Verify `includes/` folder has `.shp`, `.dbf`, `.shx` files
-
-### Residents Not Moving
-→ Already fixed with automatic reassignment algorithm
