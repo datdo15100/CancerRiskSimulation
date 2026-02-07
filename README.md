@@ -43,8 +43,6 @@ Click: ▶️ Play
 
 ---
 
-## 📊 What You'll See
-
 ### Displays
 1. **Pollution Map** - PM2.5 levels (green=good, red=hazardous)
 2. **PM2.5 Analysis** - Time series charts
@@ -153,27 +151,7 @@ Three scenarios for comparison:
 **Run:** Right-click `Batch_Scenarios` → Run Experiment
 
 ---
-
-## 📈 Expected Results
-
-### After 8 Hours
-- **Avg PM2.5:** 100-180 μg/m³ (during rush hours)
-- **Avg Cancer Risk:** 12-18%
-- **High Risk (>50%):** 3-5% of population
-
-### After 24 Hours
-- **Avg Cancer Risk:** 18-25%
-- **High Risk (>50%):** 8-12% of population
-- **Very High Risk (>80%):** 1-3% of population
-
-### Spatial Patterns
-- High PM2.5 along major roads during rush hours
-- Gradient from roads to residential areas
-- Risk hotspots near high-traffic intersections
-
----
-
-## ⚙️ Key Parameters (Adjustable)
+## ⚙️ Key Parameters
 
 ### Population
 - **Initial Population:** 100-10000 (default: 3000)
@@ -196,6 +174,3 @@ Three scenarios for comparison:
 
 ### Cannot Find Shapefiles
 → Verify `includes/` folder has `.shp`, `.dbf`, `.shx` files
-
-### Residents Not Moving
-→ Already fixed with automatic reassignment algorithm
