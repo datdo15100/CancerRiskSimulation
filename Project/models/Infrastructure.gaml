@@ -1,6 +1,6 @@
 /**
 * Name: Infrastructure
-* Author: TrungNguyen (modularized by Claude)
+* Author: TrungNguyen
 * Description: Buildings and roads with resident tracking
 */
 

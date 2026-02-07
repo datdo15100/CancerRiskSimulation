@@ -1,6 +1,6 @@
 /**
-* Name: Resident Species - Alternative Solution with Building Reassignment
-* Author: TrungNguyen (enhanced by Claude)
+* Name: Resident Species 
+* Author: TrungNguyen
 * Description: ALTERNATIVE APPROACH - If resident gets stuck, assign them a new reachable building
 *              This is useful if your road network has connectivity issues
 */
@@ -12,30 +12,46 @@ import "Cancer_Risk_Simulate_Modular.gaml"
 
 // ==================== GLOBAL RISK PARAMETERS ====================
 global {
-	float PM_ref <- 100.0;
-	float omega_pm <- 0.01;
+	// Risk formula parameters
+	float PM_ref <- 150.0;
+	float omega_pm <- 0.03;
 	float theta_outdoor <- 1.0;
 	float theta_indoor <- 0.3;
 	float mask_effectiveness <- 0.6;
-	float baseline_male_risk <- 0.2;
-	float baseline_smoke_risk <- 0.85;
+
+	// Baseline risk weights (input to sigmoid, not probabilities)
+	float baseline_male_risk <- 0.3;
+	float baseline_smoke_risk <- 0.6;
 	float baseline_obese_risk <- 0.3;
 	float baseline_family_risk <- 0.4;
-	
-	// ARRIVAL AND REASSIGNMENT PARAMETERS
+
+	// Population spawn rates
+	float male_rate <- 0.6;
+	float smoke_rate <- 0.3;
+	float obese_rate <- 0.3;
+	float family_history_rate <- 0.125;
+	float mask_rate <- 0.85;
+
+	// Emission control
+	float emission_multiplier <- 1.0;
+
+	// Movement speed (m/s) - lower = visible movement at step=3600
+	float resident_speed <- 5.0;
+
+	// Arrival and reassignment
 	float arrival_distance_threshold <- 10.0;
-	int max_stuck_steps <- 20;  // Reassign after stuck for 20 steps
-	float reassignment_search_radius <- 200.0;  // Look for buildings within 200m
+	int max_stuck_steps <- 20;
+	float reassignment_search_radius <- 200.0;
 }
 
 species resident parent: inhabitant_base skills: [moving] {
 	
 	// ==================== PERSONAL ATTRIBUTES ====================
-	bool is_male <- flip(0.6);
-	bool is_smoke <- flip(0.3);
-	bool is_obese <- flip(0.3);
-	bool is_family_history <- flip(0.125);
-	bool is_wearmask <- flip(0.85);
+	bool is_male <- flip(male_rate);
+	bool is_smoke <- flip(smoke_rate);
+	bool is_obese <- flip(obese_rate);
+	bool is_family_history <- flip(family_history_rate);
+	bool is_wearmask <- flip(mask_rate);
 	
 	// ==================== RISK TRACKING ====================
 	float baseline_risk <- 0.0;
@@ -67,18 +83,17 @@ species resident parent: inhabitant_base skills: [moving] {
 	
 	// ==================== PM2.5 EMISSION ====================
 	float emission_pm <- 0.0;
-	float base_emission_rate <- 2.0 + rnd(3.0);
+	float base_emission_rate <- 10.0 + rnd(10.0);  // 10-20 μg/m³/step for Hanoi pollution levels
 	
 	// ==================== SCHEDULE ====================
 	int work_start_hour <- 6 + rnd(3);
-	int work_end_hour;
 	int work_duration <- 8;
 	
 	// ==================== INITIALIZATION ====================
 	init {
+		speed <- resident_speed;
 		do initialize_home();
 		do initialize_work();
-		do initialize_schedule();
 		do calculate_baseline_risk();
 		do enter_home();
 		last_location <- location;
@@ -96,10 +111,6 @@ species resident parent: inhabitant_base skills: [moving] {
 			work_building <- one_of(building);
 		}
 		work_location <- any_location_in(work_building);
-	}
-	
-	action initialize_schedule {
-		work_end_hour <- work_start_hour + work_duration;
 	}
 	
 	action calculate_baseline_risk {
@@ -120,8 +131,7 @@ species resident parent: inhabitant_base skills: [moving] {
 	
 	// ==================== DAILY ROUTINE ====================
 	
-	reflex go_to_work when: current_date.hour = work_start_hour 
-							and current_date.minute = 0
+	reflex go_to_work when: current_date.hour = work_start_hour
 							and target = nil
 							and current_building = home_building {
 		target <- work_location;
@@ -129,8 +139,9 @@ species resident parent: inhabitant_base skills: [moving] {
 		do exit_building();
 	}
 	
-	reflex go_home when: current_building = work_building 
+	reflex go_home when: current_building = work_building
 						 and time_entered_building != nil
+						 and target = nil
 						 and (current_date - time_entered_building) >= work_duration#h {
 		target <- home_location;
 		target_building <- home_building;
@@ -143,12 +154,12 @@ species resident parent: inhabitant_base skills: [moving] {
 		do calculate_emission();
 		do move_towards_target();
 		do emit_pollution();
-		do check_if_stuck_and_reassign();  // NEW: Reassign if stuck
+		do check_if_stuck_and_reassign();
 		do check_arrival();
 	}
 	
 	action calculate_emission {
-		emission_pm <- base_emission_rate * speed * step / 10.0;
+		emission_pm <- emission_multiplier * base_emission_rate;
 	}
 	
 	action move_towards_target {
@@ -164,69 +175,34 @@ species resident parent: inhabitant_base skills: [moving] {
 		}
 	}
 	
-	// ==================== NEW: STUCK DETECTION WITH REASSIGNMENT ====================
-	/**
-	 * STRATEGY: If resident is stuck for too long, find a new reachable building
-	 * 
-	 * This helps when:
-	 * - Road network has disconnected components
-	 * - Target building is on an isolated island
-	 * - Pathfinding algorithm can't find a route
-	 */
-//	action check_if_stuck_and_reassign {
-//		float distance_moved <- location distance_to last_location;
-//		
-//		// Check if agent hasn't moved
-//		if distance_moved < 0.1 {
-//			stuck_counter <- stuck_counter + 1;
-//			
-//			// If stuck for max_stuck_steps, try reassignment
-//			if stuck_counter >= max_stuck_steps {
-//				write "Resident stuck for " + max_stuck_steps + " steps! Attempting reassignment...";
-//				do reassign_to_nearest_reachable_building();
-//			}
-//		} else {
-//			stuck_counter <- 0;  // Reset if moved
-//		}
-//		
-//		last_location <- location;
-//	}
+	// ==================== STUCK DETECTION WITH REASSIGNMENT ====================
 
 	action check_if_stuck_and_reassign {
-	    float distance_moved <- location distance_to last_location;
-	    
-	    // Kiểm tra nếu agent không di chuyển (hoặc di chuyển cực ít)
-	    if distance_moved < 0.1 {
-	        stuck_counter <- stuck_counter + 1;
-	        
-	        // Nếu bị tắc quá số bước quy định (max_stuck_steps)
-	        if stuck_counter >= max_stuck_steps {
-	            
-	            // --- PHẦN GHI THÔNG TIN CHI TIẾT RA CONSOLE ---
-	            string gender_str <- is_male ? "Nam" : "Nữ";
-	            string status_str <- (is_smoke ? "Hút thuốc, " : "Không hút thuốc, ") + (is_obese ? "Béo phì" : "Cân đối");
-	            
-	            write "⚠️ CẢNH BÁO: Resident bị tắc đường!";
-	            write "   - Tên định danh: " + name;
-	            write "   - Đặc điểm: " + gender_str + " (" + status_str + ")";
-	            write "   - Tọa độ hiện tại: " + location;
-	            write "   - Đang cố gắng đến: " + (target_building = work_building ? "Cơ quan" : "Nhà");
-	            write "   - Số lần đã đổi đích đến trước đó: " + reassignment_count;
-	            write "👉 Hệ thống đang tìm tòa nhà thay đổi gần nhất...";
-	            // ----------------------------------------------
-	            
-	            do reassign_to_nearest_reachable_building();
-	        }
-	    } else {
-	        stuck_counter <- 0;  // Reset bộ đếm nếu agent có di chuyển
-	    }
-	    
-	    last_location <- location;
+		float distance_moved <- location distance_to last_location;
+
+		if distance_moved < 0.1 {
+			stuck_counter <- stuck_counter + 1;
+
+			if stuck_counter >= max_stuck_steps {
+				string gender_str <- is_male ? "Nam" : "Nữ";
+				string status_str <- (is_smoke ? "Hút thuốc, " : "Không hút thuốc, ") + (is_obese ? "Béo phì" : "Cân đối");
+
+				write "⚠️ CẢNH BÁO: Resident bị tắc đường!";
+				write "   - Tên: " + name;
+				write "   - Đặc điểm: " + gender_str + " (" + status_str + ")";
+				write "   - Tọa độ: " + location;
+				write "   - Đích đến: " + (target_building = work_building ? "Cơ quan" : "Nhà");
+				write "   - Số lần đổi đích: " + reassignment_count;
+
+				do reassign_to_nearest_reachable_building();
+			}
+		} else {
+			stuck_counter <- 0;
+		}
+
+		last_location <- location;
 	}
 
-
-
-	
 	// ==================== BUILDING REASSIGNMENT ====================
 	/**
 	 * Find a new building that the resident can actually reach
@@ -244,12 +220,8 @@ species resident parent: inhabitant_base skills: [moving] {
 		// Find nearby buildings (within search radius)
 		list<building> nearby_buildings <- building at_distance reassignment_search_radius;
 		
-		// Remove current building and home building from candidates
-		nearby_buildings <- nearby_buildings - home_building;
-		
-		if going_to_work {
-			nearby_buildings <- nearby_buildings - work_building;
-		}
+		// Remove both home and work buildings from candidates (prevent home=work)
+		nearby_buildings <- nearby_buildings - home_building - work_building;
 		
 		// If we found alternative buildings
 		if length(nearby_buildings) > 0 {
@@ -288,28 +260,36 @@ species resident parent: inhabitant_base skills: [moving] {
 	 */
 	action force_arrival_at_nearest_building {
 		building nearest <- building closest_to self;
-		
+
 		if nearest != nil {
 			write "Emergency: Entering nearest building " + nearest;
-			
-			// Update target
-			target <- any_location_in(nearest);
-			target_building <- nearest;
-			
+
+			// Update building reference so schedule reflexes still work
+			bool going_to_work <- (target_building = work_building);
+			if going_to_work {
+				work_building <- nearest;
+				work_location <- any_location_in(nearest);
+			} else {
+				home_building <- nearest;
+				home_location <- any_location_in(nearest);
+			}
+
 			// Move to building and enter
-			location <- target;
-			do enter_building(target_building);
-			
+			location <- any_location_in(nearest);
+			do enter_building(nearest);
+
 			target <- nil;
 			target_building <- nil;
 			stuck_counter <- 0;
+			reassignment_count <- reassignment_count + 1;
 		}
 	}
 	
 	// ==================== ARRIVAL CHECK ====================
 	action check_arrival {
+		if target = nil { return; }
 		float distance_to_target <- location distance_to target;
-		
+
 		// Multiple arrival conditions
 		bool arrived <- false;
 		
@@ -348,14 +328,10 @@ species resident parent: inhabitant_base skills: [moving] {
 	action update_exposure_factors {
 		if is_inside_building {
 			theta <- theta_indoor;
+			protect <- 1.0; // No mask indoors
 		} else {
 			theta <- theta_outdoor;
-		}
-		
-		if is_wearmask {
-			protect <- 1.0 - mask_effectiveness;
-		} else {
-			protect <- 1.0;
+			protect <- is_wearmask ? (1.0 - mask_effectiveness) : 1.0;
 		}
 	}
 	
@@ -381,8 +357,8 @@ species resident parent: inhabitant_base skills: [moving] {
 	}
 	
 	action calculate_risk_probability {
-		float k <- 1.0;
-		float b <- -5.0;
+		float k <- 2.0;
+		float b <- -4.0;
 		float z <- k * (cumulative_risk_score + baseline_risk) + b;
 		risk_probability <- 1.0 / (1.0 + exp(-z));
 		risk_probability <- max(0.0, min(1.0, risk_probability));
@@ -443,26 +419,11 @@ species resident parent: inhabitant_base skills: [moving] {
 	}
 	
 	aspect default {
-		rgb display_color <- get_display_color();
-		
-		draw pyramid(4) color: display_color;
-		
-		if is_male {
-			draw sphere(2) at: location + {0, 0, 3} color: display_color;
-		} else {
-			draw cube(2.5) at: location + {0, 0, 3} color: display_color;
-		}
-	}
-	
-	aspect risk_view {
 		rgb risk_color <- get_risk_color();
-		
-		draw pyramid(4) color: risk_color;
-		
 		if is_male {
-			draw sphere(2) at: location + {0, 0, 3} color: risk_color;
+			draw triangle(6) color: risk_color border: #black;
 		} else {
-			draw cube(2.5) at: location + {0, 0, 3} color: risk_color;
+			draw circle(3) color: risk_color border: #black;
 		}
 	}
 }

@@ -1,6 +1,6 @@
 /**
 * Name: Cancer Risk Simulation - Grid-Based PM2.5
-* Author: TrungNguyen (modularized by Claude)
+* Author: TrungNguyen
 * Description: Modular PM2.5 simulation with grid diffusion
 *              - Clean, organized code structure
 *              - Gender-based resident visualization (60% male, 40% female)
@@ -14,15 +14,14 @@ model Cancer_Risk_Simulate
 
 // ==================== IMPORTS ====================
 import "Infrastructure.gaml"
-import "Resident_WithRisk.gaml"  // Use the FIXED version
+import "Resident_WithRisk.gaml"
 import "PollutionGrid.gaml"
-import "date_time.gaml"
 
 // ==================== GLOBAL CONFIGURATION ====================
 global {
 	
 	// ==================== SIMULATION PARAMETERS ====================
-	float step <- 86400 #sec;
+	float step <- 60 #sec;  // 1 minute - visible movement
 	date starting_date <- date("2023-10-01 06:00:00");
 	
 	// ==================== SPATIAL DATA ====================
@@ -36,7 +35,11 @@ global {
 	
 	// ==================== POPULATION PARAMETERS ====================
 	int initial_population <- 3000;
-	
+
+	// ==================== SCENARIO (for batch experiments) ====================
+	// 0=Baseline, 1=Unhealthy Lifestyle, 2=Clean Air
+	int scenario <- 0;
+
 	// ==================== STATISTICS (AUTO-UPDATED) ====================
 	
 	// Resident statistics
@@ -54,7 +57,7 @@ global {
 	int male_count <- 0 update: length(resident where each.is_male);
 	int female_count <- 0 update: length(resident where not(each.is_male));
 	
-	// ==================== RISK STATISTICS (NEW!) ====================
+	// ==================== RISK STATISTICS ====================
 	float avg_risk_probability <- 0.0 update: mean(resident collect each.risk_probability);
 	float max_risk_probability <- 0.0 update: max(resident collect each.risk_probability);
 	float min_risk_probability <- 0.0 update: min(resident collect each.risk_probability);
@@ -67,9 +70,25 @@ global {
 	
 	// ==================== INITIALIZATION ====================
 	init {
+		do apply_scenario();
 		do create_infrastructure();
 		do create_population();
 		do initialize_network();
+	}
+
+	action apply_scenario {
+		switch scenario {
+			match 1 {
+				// Unhealthy Lifestyle: high smoke, high obesity, low mask
+				smoke_rate <- 0.8;
+				obese_rate <- 0.6;
+				mask_rate <- 0.1;
+			}
+			match 2 {
+				// Clean Air: no PM2.5 emission
+				emission_multiplier <- 0.0;
+			}
+		}
 	}
 	
 	action create_infrastructure {
@@ -88,13 +107,17 @@ global {
 	}
 	
 	// ==================== SIMULATION REFLEXES ====================
-	
+
 	reflex update_road_weights {
 		road_weights <- road as_map(each::each.shape.perimeter / each.speed_rate);
 	}
-	
-	reflex pm25_diffusion {
+
+	// Track last diffusion hour to run diffusion only once per hour
+	int last_diffusion_hour <- -1;
+
+	reflex pm25_diffusion when: current_date.hour != last_diffusion_hour {
 		diffuse var: pm25_level on: pollution_grid proportion: 0.6;
+		last_diffusion_hour <- current_date.hour;
 	}
 	
 	// ==================== STATISTICS CALCULATIONS ====================
@@ -120,8 +143,30 @@ global {
 experiment Cancer_Risk_Simulate type: gui {
 	
 	// ==================== EXPERIMENT PARAMETERS ====================
-	parameter "Initial Population" var: initial_population min: 100 max: 10000 category: "Population";
-	parameter "Simulation Step (seconds)" var: step min: 60 max:  604800 category: "Simulation";
+
+	// Simulation
+	parameter "Initial Population" var: initial_population min: 100 max: 10000 category: "Simulation";
+	parameter "Simulation Step (seconds)" var: step min: 60 max: 3600 category: "Simulation";
+	parameter "Resident Speed (m/s)" var: resident_speed min: 0.1 max: 5.0 category: "Simulation";
+
+	// Population Rates (applied at init only)
+	parameter "Male Rate" var: male_rate min: 0.0 max: 1.0 category: "Population";
+	parameter "Smoke Rate" var: smoke_rate min: 0.0 max: 1.0 category: "Population";
+	parameter "Obese Rate" var: obese_rate min: 0.0 max: 1.0 category: "Population";
+	parameter "Family History Rate" var: family_history_rate min: 0.0 max: 1.0 category: "Population";
+	parameter "Mask Wearing Rate" var: mask_rate min: 0.0 max: 1.0 category: "Population";
+
+	// Risk Weights
+	parameter "Baseline Male Risk" var: baseline_male_risk min: 0.0 max: 2.0 category: "Risk";
+	parameter "Baseline Smoke Risk" var: baseline_smoke_risk min: 0.0 max: 2.0 category: "Risk";
+	parameter "Baseline Obese Risk" var: baseline_obese_risk min: 0.0 max: 2.0 category: "Risk";
+	parameter "Baseline Family Risk" var: baseline_family_risk min: 0.0 max: 2.0 category: "Risk";
+	parameter "PM Weight (W_pm)" var: omega_pm min: 0.001 max: 0.1 category: "Risk";
+	parameter "PM Reference" var: PM_ref min: 50.0 max: 500.0 category: "Risk";
+
+	// Environment
+	parameter "Emission Multiplier" var: emission_multiplier min: 0.0 max: 5.0 category: "Environment";
+	parameter "Mask Effectiveness" var: mask_effectiveness min: 0.0 max: 1.0 category: "Environment";
 	
 	// ==================== OUTPUT DISPLAYS ====================
 	output {
@@ -158,7 +203,7 @@ experiment Cancer_Risk_Simulate type: gui {
 				data "Total PM Emission" value: total_traffic_pm_emission color: #purple marker: false thickness: 2;
 			}
 			
-			// NEW: Risk Probability Chart
+			// Risk Probability Chart
 			chart "Cancer Risk Probability" type: series size: {1.0, 0.34} position: {0, 0.66} {
 				data "Average Risk" value: avg_risk_probability color: #blue marker: false thickness: 2;
 				data "Max Risk" value: max_risk_probability color: #red marker: false thickness: 2;
@@ -166,7 +211,7 @@ experiment Cancer_Risk_Simulate type: gui {
 			}
 		}
 		
-		// ==================== NEW: RISK DISTRIBUTION DISPLAY ====================
+		// ==================== RISK DISTRIBUTION DISPLAY ====================
 		display "Risk Distribution" type: 2d {
 			// Risk Categories Bar Chart
 			chart "Risk Categories" type: histogram size: {1.0, 0.5} position: {0, 0} {
@@ -211,7 +256,7 @@ experiment Cancer_Risk_Simulate type: gui {
 				draw string("Total Emission: " + (int(total_traffic_pm_emission)) + " μg/m³")
 					at: {20, 400} color: #purple font: font("Arial", 14);
 				
-				// NEW: Risk Statistics Panel
+				// Risk Statistics Panel
 				draw string("CANCER RISK STATISTICS") at: {20, 430} color: #white font: font("Arial", 12, #bold);
 				draw string("Avg Risk: " + (with_precision(avg_risk_probability * 100, 2)) + "%") 
 					at: {20, 455} color: #lightblue font: font("Arial", 14);
@@ -236,7 +281,7 @@ experiment Cancer_Risk_Simulate type: gui {
 		monitor "Min PM2.5" value: min_pm25 color: #green;
 		monitor "Total PM Emission" value: total_traffic_pm_emission color: #purple;
 		
-		// NEW: Risk Monitors
+		// Risk Monitors
 		monitor "Average Risk Probability" value: avg_risk_probability color: #blue;
 		monitor "Max Risk Probability" value: max_risk_probability color: #red;
 		monitor "Low Risk Residents" value: low_risk_count color: #green;
@@ -244,4 +289,12 @@ experiment Cancer_Risk_Simulate type: gui {
 		monitor "High Risk Residents" value: high_risk_count color: #orange;
 		monitor "Very High Risk Residents" value: very_high_risk_count color: #red;
 	}
+}
+
+// ==================== BATCH EXPERIMENTS ====================
+// Scenario 0 (Baseline): Default population, normal emission
+// Scenario 1 (Unhealthy Lifestyle): 80% smoke, 60% obese, 10% mask, normal emission
+// Scenario 2 (Clean Air): Default population, emission = 0
+experiment Batch_Scenarios type: batch repeat: 1 until: (cycle >= 2000) {
+	parameter "Scenario" var: scenario among: [0, 1, 2];
 }

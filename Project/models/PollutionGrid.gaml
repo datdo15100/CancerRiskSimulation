@@ -1,6 +1,6 @@
 /**
 * Name: Pollution Grid
-* Author: TrungNguyen (modularized by Claude)
+* Author: TrungNguyen
 * Description: Grid-based PM2.5 tracking with diffusion and decay
 */
 
@@ -25,29 +25,36 @@ grid pollution_grid width: 50 height: 50 neighbors: 8 {
 		last_decay_hour <- current_date.hour;
 	}
 	
-	// ==================== COLOR CALCULATION (WHO Air Quality Scale) ====================
+	// ==================== COLOR CALCULATION (US EPA AQI Standard) ====================
 	rgb get_pm25_color {
+		int alpha <- 130;
 		if pm25_level <= 12.0 {
-			return rgb(0, 255, 0, 200);  // Good: Green
-		} 
-		else if pm25_level <= 35.0 {
-			float ratio <- (pm25_level - 12.0) / (35.0 - 12.0);
-			return rgb(255 * ratio, 255, 0, 200);  // Moderate: Yellow
+			// Good: Green (#00E400)
+			return rgb(0, 228, 0, alpha);
 		}
-		else if pm25_level <= 55.0 {
-			float ratio <- (pm25_level - 35.0) / (55.0 - 35.0);
-			return rgb(255, 255 * (1 - ratio * 0.35), 0, 200);  // Unhealthy for Sensitive: Orange
+		else if pm25_level <= 35.4 {
+			// Good → Moderate: Green → Yellow (#FFFF00)
+			float ratio <- (pm25_level - 12.0) / (35.4 - 12.0);
+			return rgb(int(255 * ratio), int(228 + 27 * ratio), 0, alpha);
 		}
-		else if pm25_level <= 150.0 {
-			float ratio <- (pm25_level - 55.0) / (150.0 - 55.0);
-			return rgb(255, 165 * (1 - ratio), 0, 200);  // Unhealthy: Red
+		else if pm25_level <= 55.4 {
+			// Moderate → USG: Yellow → Orange (#FF7E00)
+			float ratio <- (pm25_level - 35.4) / (55.4 - 35.4);
+			return rgb(255, int(255 - 129 * ratio), 0, alpha);
 		}
-		else if pm25_level <= 250.0 {
-			float ratio <- (pm25_level - 150.0) / (250.0 - 150.0);
-			return rgb(255 - 126 * ratio, 0, 128 * ratio, 200);  // Very Unhealthy: Purple
+		else if pm25_level <= 150.4 {
+			// USG → Unhealthy: Orange → Red (#FF0000)
+			float ratio <- (pm25_level - 55.4) / (150.4 - 55.4);
+			return rgb(255, int(126 * (1 - ratio)), 0, alpha);
+		}
+		else if pm25_level <= 250.4 {
+			// Unhealthy → Very Unhealthy: Red → Purple (#8F3F97)
+			float ratio <- (pm25_level - 150.4) / (250.4 - 150.4);
+			return rgb(int(255 - 112 * ratio), int(63 * ratio), int(151 * ratio), alpha);
 		}
 		else {
-			return rgb(128, 0, 128, 200);  // Hazardous: Maroon
+			// Hazardous: Maroon (#7E0023)
+			return rgb(126, 0, 35, alpha);
 		}
 	}
 }
