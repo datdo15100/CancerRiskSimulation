@@ -190,7 +190,7 @@ Three scenarios for comparison:
 ### System Architecture
 This is the species description and their relation as described in the figure:
 
-![Model Architecture](https://www.plantuml.com/plantuml/proxy?cache=no&src=https://github.com/datdo15100/CancerRiskSimulation/blob/test_branch_grid/Cancer_Risk_Simulation_Simple.puml)
+![Model Architecture](https://www.plantuml.com/plantuml/proxy?cache=no&src=https://raw.githubusercontent.com/datdo15100/CancerRiskSimulation/test_branch_grid/Cancer_Risk_Simulation_Simple.puml)
 
 ---
 
