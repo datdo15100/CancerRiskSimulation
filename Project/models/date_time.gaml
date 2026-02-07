@@ -9,42 +9,31 @@
 model datetime
 
 global {
-	//Time value for a cycle by default 1s/cycle
 	float stepDuration<-1000.0#ms min: 100.0#ms max: 600000#ms;
-	//Background of the clock
 	image_file clock_normal     const: true <- image_file("../images/clock.png");
-	//Image for the big hand 
 	image_file clock_big_hand   const: true <- image_file("../images/big_hand.png");
-	//Image for the small hand
 	image_file clock_small_hand const: true <- image_file("../images/small_hand.png");
-	//Image for the clock alarm
 	image_file clock_alarm 	  const: true <- image_file("../images/alarm_hand.png");
-	//Zoom to take in consideration the zoom in the display, to better write the cycle values
 	int zoom <- 4 min:2 max:10;
-	//Postion of the clock
 	float clock_x <- world.shape.width/2;
 	float clock_y <- world.shape.height/2;
 	
-	//Alarm parameters
 	int alarm_days <- 0 min:0 max:365;
 	int alarm_hours <- 2 min:0 max:11;
 	int alarm_minutes <- 0 min:0 max:59;
 	int  alarm_seconds <- 0 min:0 max:59;
 	bool alarm_am <- true;
-	//Compute the number of cycles corresponding to the time of alarm
 	int  alarmCycle <-  int((alarm_seconds+alarm_minutes*60+alarm_hours*3600 + (alarm_am ? 0 : 3600*12) + alarm_days*3600*24) * 1000#ms / stepDuration);
 	
-	//Time elapsed since the beginning of the experiment
 	int timeElapsed <- 0 update:  int(cycle * stepDuration);
 	string reflexType <-"";
 	init {
-		//Creation of the clock
 		create clock_base number: 1 {
 			location <- {clock_x,clock_y};
 		}
 	}
 }
-//Species that will represent the clock
+
 species  clock_base { 
 		float nb_minutes<-0.0 update: ((timeElapsed mod 3600#s))/60#s; //Mod with 60 minutes or 1 hour, then divided by one minute value to get the number of minutes
 		float nb_hours<-0.0 update:((timeElapsed mod 86400#s))/3600#s;

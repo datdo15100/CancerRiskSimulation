@@ -1,8 +1,6 @@
 /**
 * Name: Resident Species 
-* Author: TrungNguyen
-* Description: ALTERNATIVE APPROACH - If resident gets stuck, assign them a new reachable building
-*              This is useful if your road network has connectivity issues
+* Author: Group10
 */
 
 model resident_model
@@ -10,7 +8,6 @@ model resident_model
 import "Inhabitant_base.gaml"
 import "Cancer_Risk_Simulate_Modular.gaml"
 
-// ==================== GLOBAL RISK PARAMETERS ====================
 global {
 	// Risk formula parameters
 	float PM_ref <- 150.0;
@@ -129,7 +126,7 @@ species resident parent: inhabitant_base skills: [moving] {
 		}
 	}
 	
-	// ==================== DAILY ROUTINE ====================
+	//  DAILY ROUTINE 
 	
 	reflex go_to_work when: current_date.hour = work_start_hour
 							and target = nil
@@ -148,7 +145,7 @@ species resident parent: inhabitant_base skills: [moving] {
 		do exit_building();
 	}
 	
-	// ==================== MOVEMENT ====================
+	//  MOVEMENT 
 	
 	reflex move when: target != nil and not is_inside_building {
 		do calculate_emission();
@@ -175,7 +172,7 @@ species resident parent: inhabitant_base skills: [moving] {
 		}
 	}
 	
-	// ==================== STUCK DETECTION WITH REASSIGNMENT ====================
+	//  STUCK DETECTION WITH REASSIGNMENT 
 
 	action check_if_stuck_and_reassign {
 		float distance_moved <- location distance_to last_location;
@@ -203,7 +200,7 @@ species resident parent: inhabitant_base skills: [moving] {
 		last_location <- location;
 	}
 
-	// ==================== BUILDING REASSIGNMENT ====================
+	//  BUILDING REASSIGNMENT 
 	/**
 	 * Find a new building that the resident can actually reach
 	 * 
@@ -214,22 +211,16 @@ species resident parent: inhabitant_base skills: [moving] {
 	 * 4. Set new target
 	 */
 	action reassign_to_nearest_reachable_building {
-		// Determine which building type we're trying to reach
 		bool going_to_work <- (target_building = work_building);
-		
-		// Find nearby buildings (within search radius)
 		list<building> nearby_buildings <- building at_distance reassignment_search_radius;
 		
-		// Remove both home and work buildings from candidates (prevent home=work)
 		nearby_buildings <- nearby_buildings - home_building - work_building;
 		
 		// If we found alternative buildings
 		if length(nearby_buildings) > 0 {
-			// Pick the closest one
 			building new_building <- nearby_buildings closest_to self;
 			
 			if going_to_work {
-				// Reassign work building
 				write "Reassigning work building from " + work_building + " to " + new_building;
 				work_building <- new_building;
 				work_location <- any_location_in(new_building);
@@ -254,10 +245,9 @@ species resident parent: inhabitant_base skills: [moving] {
 		}
 	}
 	
-	// ==================== EMERGENCY FALLBACK ====================
-	/**
-	 * Last resort: If no buildings in radius, just enter the closest building
-	 */
+
+//	 Last resort: If no buildings in radius, just enter the closest building
+
 	action force_arrival_at_nearest_building {
 		building nearest <- building closest_to self;
 
@@ -285,12 +275,11 @@ species resident parent: inhabitant_base skills: [moving] {
 		}
 	}
 	
-	// ==================== ARRIVAL CHECK ====================
+	//  ARRIVAL CHECK 
 	action check_arrival {
 		if target = nil { return; }
 		float distance_to_target <- location distance_to target;
 
-		// Multiple arrival conditions
 		bool arrived <- false;
 		
 		if distance_to_target <= arrival_distance_threshold or location = target {
@@ -315,7 +304,7 @@ species resident parent: inhabitant_base skills: [moving] {
 		emission_pm <- 0.0;
 	}
 	
-	// ==================== RISK CALCULATION ====================
+	// RISK CALCULATION 
 	
 	reflex update_risk {
 		do update_exposure_factors();
@@ -364,7 +353,7 @@ species resident parent: inhabitant_base skills: [moving] {
 		risk_probability <- max(0.0, min(1.0, risk_probability));
 	}
 	
-	// ==================== BUILDING INTERACTION ====================
+	//  BUILDING INTERACTION 
 	
 	action enter_building(building b) {
 		is_inside_building <- true;
@@ -390,7 +379,7 @@ species resident parent: inhabitant_base skills: [moving] {
 		stuck_counter <- 0;
 	}
 	
-	// ==================== VISUALIZATION ====================
+	//  VISUALIZATION 
 	
 	rgb get_display_color {
 		if is_inside_building {

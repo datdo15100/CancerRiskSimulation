@@ -1,7 +1,6 @@
 /**
 * Name: Pollution Grid
 * Author: TrungNguyen
-* Description: Grid-based PM2.5 tracking with diffusion and decay
 */
 
 model pollution_grid_model
@@ -9,7 +8,7 @@ model pollution_grid_model
 // ==================== POLLUTION GRID SPECIES ====================
 grid pollution_grid width: 50 height: 50 neighbors: 8 {
 	
-	// ==================== POLLUTION ATTRIBUTES ====================
+	//  POLLUTION ATTRIBUTES 
 	float pm25_level <- 0.0;
 	float grid_value <- pm25_level update: pm25_level;  // Built-in for elevation
 	
