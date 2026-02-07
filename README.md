@@ -7,7 +7,7 @@ Agent-Based Model of PM2.5 Exposure and Cancer Risk in Urban Environments
 
 ---
 
-## 👥 Team Members
+## Team Members
 
 - **Nguyen Dang Trung** - 2440054
 - **Do Thanh Dat** - 2440059
@@ -15,7 +15,7 @@ Agent-Based Model of PM2.5 Exposure and Cancer Risk in Urban Environments
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 ### 1. Install GAMA Platform
 Download from: [gama-platform.org](https://gama-platform.org/download)
@@ -38,12 +38,11 @@ File → Import → Existing Projects into Workspace
 ```
 Open: Project/models/Cancer_Risk_Simulate_Modular.gaml
 Double-click: Cancer_Risk_Simulate (in Experiments tab)
-Click: ▶️ Play
 ```
 
 ---
 
-## 📊 What You'll See
+## What You'll See
 
 ### Displays
 1. **Pollution Map** - PM2.5 levels (green=good, red=hazardous)
@@ -83,7 +82,7 @@ Project/
 
 ---
 
-## 🧬 Model Overview
+## Model Overview
 
 ### Key Components
 
@@ -111,7 +110,7 @@ Project/
 
 ---
 
-## 📐 Key Formulas
+## Key Formulas
 
 ### PM2.5 Emission
 ```
@@ -134,7 +133,7 @@ Baseline Risk Factors:
 
 ---
 
-## 🧪 Experiments
+## Experiments
 
 ### GUI Experiment (Interactive)
 - Real-time visualization
@@ -154,7 +153,7 @@ Three scenarios for comparison:
 
 ---
 
-## 📈 Expected Results
+## Expected Results
 
 ### After 8 Hours
 - **Avg PM2.5:** 100-180 μg/m³ (during rush hours)
@@ -173,7 +172,7 @@ Three scenarios for comparison:
 
 ---
 
-## ⚙️ Key Parameters (Adjustable)
+## Key Parameters (Adjustable)
 
 ### Population
 - **Initial Population:** 100-10000 (default: 3000)
@@ -189,7 +188,7 @@ Three scenarios for comparison:
 
 ---
 
-## ⚠️ Troubleshooting
+## Troubleshooting
 
 ### Simulation Too Slow
 → Reduce `initial_population` to 1000-3000
