@@ -7,7 +7,7 @@ Agent-Based Model of PM2.5 Exposure and Cancer Risk in Urban Environments
 
 ---
 
-## 👥 Team Members
+## Team Members
 
 - **Nguyen Dang Trung** - 2440054
 - **Do Thanh Dat** - 2440059
@@ -15,7 +15,7 @@ Agent-Based Model of PM2.5 Exposure and Cancer Risk in Urban Environments
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 ### 1. Install GAMA Platform
 Download from: [gama-platform.org](https://gama-platform.org/download)
@@ -38,10 +38,11 @@ File → Import → Existing Projects into Workspace
 ```
 Open: Project/models/Cancer_Risk_Simulate_Modular.gaml
 Double-click: Cancer_Risk_Simulate (in Experiments tab)
-Click: ▶️ Play
 ```
 
 ---
+
+## What You'll See
 
 ### Displays
 1. **Pollution Map** - PM2.5 levels (green=good, red=hazardous)
@@ -81,7 +82,7 @@ Project/
 
 ---
 
-## 🧬 Model Overview
+## Model Overview
 
 ### Key Components
 
@@ -109,7 +110,7 @@ Project/
 
 ---
 
-## 📐 Key Formulas
+## Key Formulas
 
 ### PM2.5 Emission
 ```
@@ -132,7 +133,7 @@ Baseline Risk Factors:
 
 ---
 
-## 🧪 Experiments
+## Experiments
 
 ### GUI Experiment (Interactive)
 - Real-time visualization
@@ -151,7 +152,28 @@ Three scenarios for comparison:
 **Run:** Right-click `Batch_Scenarios` → Run Experiment
 
 ---
-## ⚙️ Key Parameters
+
+## Expected Results
+
+### After 8 Hours
+- **Avg PM2.5:** 100-180 μg/m³ (during rush hours)
+- **Avg Cancer Risk:** 12-18%
+- **High Risk (>50%):** 3-5% of population
+
+### After 24 Hours
+- **Avg Cancer Risk:** 18-25%
+- **High Risk (>50%):** 8-12% of population
+- **Very High Risk (>80%):** 1-3% of population
+
+### Spatial Patterns
+- High PM2.5 along major roads during rush hours
+- Gradient from roads to residential areas
+- Risk hotspots near high-traffic intersections
+
+---
+
+## Key Parameters (Adjustable)
+
 
 ### Population
 - **Initial Population:** 100-10000 (default: 3000)
@@ -165,9 +187,15 @@ Three scenarios for comparison:
 - **PM Weight (omega_pm):** 0.001-0.1 (default: 0.03)
 - **PM Reference:** 50-500 μg/m³ (default: 150)
 
+
+### System Architecture
+This is the species description and their relation as described in the figure:
+
+![Model Architecture](https://www.plantuml.com/plantuml/proxy?cache=no&src=https://raw.githubusercontent.com/datdo15100/CancerRiskSimulation/test_branch_grid/Cancer_Risk_Simulation_Simple.puml)
+
 ---
 
-## ⚠️ Troubleshooting
+## Troubleshooting
 
 ### Simulation Too Slow
 → Reduce `initial_population` to 1000-3000

@@ -1,0 +1,123 @@
+@startuml Cancer_Risk_Simulation_Simple
+
+title Cancer Risk Simulation - Simplified Species View
+
+skinparam classAttributeIconSize 0
+
+' ==================== MAIN SPECIES ====================
+
+class global {
+    + initial_population : int
+    + road_network : graph
+    + PM_ref : float
+    + omega_pm : float
+    --
+    + create_infrastructure()
+    + create_population()
+    + pm25_diffusion()
+}
+
+class resident {
+    **Personal**
+    + is_male, is_smoke : bool
+    + is_obese, is_family_history : bool
+    + is_wearmask : bool
+    
+    **Risk**
+    + baseline_risk : float
+    + cumulative_risk_score : float
+    + risk_probability : float
+    
+    **Location**
+    + home_building : building
+    + work_building : building
+    + current_building : building
+    
+    **Movement**
+    + target : point
+    + stuck_counter : int
+    --
+    + go_to_work()
+    + go_home()
+    + emit_pollution()
+    + calculate_risk_probability()
+    + reassign_to_nearest_reachable_building()
+}
+
+class building {
+    + residents_inside : list<resident>
+    + height : int
+    --
+    + add_resident(r)
+    + remove_resident(r)
+    + get_occupancy() : int
+}
+
+class road {
+    + nb_drivers : int
+    + speed_rate : float
+    + capacity : float
+    --
+    + calculate_speed_rate() : float
+    + is_congested() : bool
+}
+
+class pollution_grid <<grid>> {
+    + pm25_level : float
+    + last_decay_hour : int
+    --
+    + hourly_decay()
+    + get_pm25_color() : rgb
+}
+
+' ==================== RELATIONSHIPS ====================
+
+resident "3000" --> "1" building : home
+resident "3000" --> "1" building : work
+resident "0..*" --> "0..1" building : inside
+
+building "1" *-- "0..*" resident : contains
+
+resident ..> road : moves on
+resident ..> pollution_grid : emits to / reads from
+
+global ..> resident : creates & manages
+global ..> building : creates
+global ..> road : creates
+global ..> pollution_grid : diffuses
+
+' ==================== NOTES ====================
+
+note right of resident
+  **Core Loop:**
+  1. Wake up at home (6-9 AM)
+  2. Travel to work (emit PM2.5)
+  3. Work for 8 hours (indoor)
+  4. Travel home (emit PM2.5)
+  5. Accumulate risk from exposure
+  
+  **Risk Formula:**
+  risk_prob = sigmoid(
+    cumulative_score + baseline
+  )
+end note
+
+note left of pollution_grid
+  **50×50 Grid**
+  
+  Every step:
+  • Residents add PM2.5
+  
+  Every hour:
+  • Diffuse 60% to neighbors
+  • Decay 10% everywhere
+end note
+
+note bottom of building
+  **3 States:**
+  • Home (orange)
+  • Work (blue)
+  • Traveling (yellow)
+end note
+
+@enduml
